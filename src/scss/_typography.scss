@@ -1,0 +1,8 @@
+@import url('https://fonts.googleapis.com/css?family=Open+Sans');
+
+.read-it-to-me-content-group:not(.ritm-disabled):before,
+.read-it-to-me-control-bubble,
+.read-it-to-me-control-bar {
+  font-family: 'Open Sans', sans-serif;
+  font-size:20px;
+}

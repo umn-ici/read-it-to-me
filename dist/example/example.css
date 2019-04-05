@@ -1,0 +1,26 @@
+body {
+  font-family: 'Open Sans', sans-serif;
+  font-weight:300;
+  font-size:20px;
+  margin:50px;
+}
+h1, h2, h3, h4, h5 {
+  margin-top:10px;
+  font-weight:700;
+}
+strong {
+  font-weight:400;
+}
+.example article {
+  margin-bottom:20px;
+  margin-left:40px;
+}
+.side-note {
+  padding:2px 10px;
+  background-color:#eee;
+  font-size:.65em;
+}
+.read-it-to-me-content-group {
+  padding-left:5px;
+  padding-right:5px;
+}
