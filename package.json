@@ -12,8 +12,12 @@
     "url": "git@github.com:umn-ici/read-it-to-me.git"
   },
   "contributors": [
-    {"name" : "Shawn Lawler"},
-    {"name" : "Jonathon Walz"}
+    {
+      "name": "Shawn Lawler"
+    },
+    {
+      "name": "Jonathon Walz"
+    }
   ],
   "license": "MIT",
   "devDependencies": {
