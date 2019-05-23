@@ -7,7 +7,6 @@ const ritmDisabledClassName = 'ritm-disabled';
 const groupClassName = 'read-it-to-me-content-group';
 const focusClassName = 'focusin';
 let contentQueue = [];
-let controlBubble;
 let controlBar;
 let ritmEnabled = true;
 let eventsBin = {
@@ -28,21 +27,16 @@ let setup = () => {
   }
 };
 
-let makeElemTabable = (elem) => {
-  if (!elem.hasAttribute('tabindex')) {
-    elem.setAttribute('tabindex', '0');
-  }
-  else {
-    if (!elem.classList.contains('ritm-do-not-strip-tabindex')) {
-      elem.classList.add('ritm-do-not-strip-tabindex');
-    }
-  }
-};
-
 let addReadItToMeElements = () => {
-  let groupSelectorElements = document.querySelectorAll(`.${groupClassName}`);
+  // build the control bubble
+  const controlBubble = document.createElement('div');
+  controlBubble.classList.add('read-it-to-me-control-bubble');
+  controlBubble.tabIndex = -1;
+  controlBubble.innerHTML = '<p class="read-it-to-me-label"></p><button type="button" class="play-pause-resume"></button><button type="button" class="cancel-audio"><span class="visually-hidden">Cancel audio</a></button>';
+
+  const groupSelectorElements = document.querySelectorAll(`.${groupClassName}`);
   // Inner wrap each readable group in a new div.read-this-to-me
-  let wrapSource = document.createElement('div');
+  const wrapSource = document.createElement('div');
   wrapSource.classList.add('read-this-to-me');
   groupSelectorElements.forEach((elem) => {
     let wrapper = wrapSource.cloneNode(false);
@@ -50,12 +44,22 @@ let addReadItToMeElements = () => {
     while (elem.firstChild !== wrapper) {
       wrapper.appendChild(elem.firstChild);
     }
-  });
 
-  // build the control bubble
-  controlBubble = document.createElement('div');
-  controlBubble.classList.add('read-it-to-me-control-bubble');
-  controlBubble.innerHTML = '<p class="read-it-to-me-label"></p><button type="button" class="play-pause-resume"></button><button type="button" class="cancel-audio"><span class="visually-hidden">Cancel audio</a></button>';
+    const clonedControlBubble = controlBubble.cloneNode(true);
+
+    clonedControlBubble.addEventListener('focusin', focusInListener(elem));
+    clonedControlBubble.addEventListener('focusout', focusOutListener(elem));
+    clonedControlBubble.querySelector('button.play-pause-resume').addEventListener('click', (e) => {
+      if (!ritmEnabled) {return false;}
+
+      e.stopPropagation();
+      let currentContentGroup = e.target.closest(`.${groupClassName}`);
+      contentGroupManager(currentContentGroup);
+    });
+    clonedControlBubble.querySelector('button.cancel-audio').addEventListener('click', cancelAudio(clonedControlBubble));
+
+    elem.insertBefore(clonedControlBubble, wrapper);
+  });
 
   // build the control bar
   controlBar = document.createElement('div');
@@ -79,29 +83,6 @@ let addReadItToMeElements = () => {
   // append the control bar to body where it's least likely to be effected by layout styling and the control bubble so we can attach events to it.
   let docBody = document.body;
   docBody.insertBefore(controlBar, docBody.firstChild);
-  docBody.appendChild(controlBubble);
-};
-
-/* Why a try...catch?  To deal with the interesting behavior that comes out of using appendChild in a blur or focusout listener.
-   Ex: focusout listener runs appendChild which fires a blur event, your focusout listener runs again, attempting
-   to run appendChild again.  At the second run of appendChild your element will still have it's parentNode defined,
-   but your element isn't among it's children anymore! And an exception is thrown:
-   Uncaught DOMException: Failed to execute 'appendChild' on 'Node': The node to be removed is no longer a child of this node. Perhaps it was moved in a 'blur' event handler?
-*/
-let attachControlBubbleToGroup = (elem) => {
-  if (controlBubble.parentNode !== elem) {
-    try {
-      elem.insertBefore(controlBubble, elem.firstChild);
-    }
-    catch (e) {}
-  }
-};
-
-let moveControlBubbleToBody = () => {
-  try {
-    document.body.appendChild(controlBubble);
-  }
-  catch (e) {}
 };
 
 let clearStrayFocus = () => {
@@ -111,106 +92,20 @@ let clearStrayFocus = () => {
   }
 };
 
-let groupSelectorEnter = (e) => {
-  if (!ritmEnabled) {return false;}
-
-  // clean up stray focusin class if there is one
-  clearStrayFocus();
-
-  let targ = e.target;
-  if (targ && targ.matches(`.${groupClassName}`) && !targ.querySelector('.read-it-to-me-control-bubble')) {
-    attachControlBubbleToGroup(targ);
-  }
-};
-
-let groupSelectorLeave = (e) => {
-  if (!ritmEnabled) {return false;}
-
-  let group = e.relatedTarget ? e.relatedTarget.closest(`.${groupClassName}`) : null;
-
-  if (group) {
-    attachControlBubbleToGroup(group);
-  }
-  else {
-    moveControlBubbleToBody();
-  }
-};
-
-let groupFocusInListener = (e) => {
+const focusInListener = elem => e => {
   if (!ritmEnabled) {return false;}
 
   // don't want this bubbling up from nested groups
   e.stopPropagation();
 
-  let targ = e.target;
-  let relTarg = e.relatedTarget;
-  let relTargIsInTarg;
-
-  if (targ) {
-    // see if target is a RITM group wrapper (which is what we need)
-    if (targ.matches(`.${groupClassName}`)) {
-      // set our flag here to true if relatedTarget is our control bubble button.
-      relTargIsInTarg = relTarg && targ.firstChild.querySelector('button') === relTarg ? true : false;
-
-      // give it a class to apply some focus visuals (if it doesn't already have one)
-      if (!targ.classList.contains(focusClassName)) {
-        targ.classList.add(focusClassName);
-      }
-      // and then slap the control bubble in there if it isn't there already
-      if (!targ.querySelector('.read-it-to-me-control-bubble')) {
-        attachControlBubbleToGroup(targ);
-      }
-
-      /* if relTargIsInTarg is true than it means the user is in reverse (shift-tabbing) and so
-       we DO NOT want to move focus (back to) the control bubble button (infinite behavior loop traps are bad mkay). */
-      if (!relTargIsInTarg) {
-        // save y scroll and then restore it after focus so users don't experience a disorienting page jump
-        let preFocusPositionY = window.scrollY;
-        targ.firstChild.querySelector('button').focus();
-        window.scroll(0, preFocusPositionY);
-      }
-    }
-  }
+  elem.classList.add(focusClassName);
 };
 
-let groupFocusOutListener = (e) => {
-  if (!ritmEnabled) {return false;}
-
+const focusOutListener = elem => e => {
   // don't want this bubbling up from nested groups
   e.stopPropagation();
 
-  let targ = e.target;
-  let relTarg = e.relatedTarget;
-  let parentGroup;
-
-  if (targ && relTarg) {
-
-    // Bail if focus is moving from wrapper to control bubble, or vice versa
-    if (targ.matches(`.${groupClassName}`) && relTarg.matches('.read-it-to-me-control-bubble button') && targ.contains(relTarg)) {
-      return false;
-    }
-    // Bail if focus is moving from control bubble to it's parent group
-    if (targ.matches('.read-it-to-me-control-bubble button') && relTarg.matches(`.${groupClassName}`) && relTarg.contains(targ)) {
-      return false;
-    }
-    // Bail if focus is moving from one control bubble button to another
-    if (targ.matches('.read-it-to-me-control-bubble button') && relTarg.matches('.read-it-to-me-control-bubble button')) {
-      return false;
-    }
-
-    // get the group wrapper
-    if (targ.matches(`.${groupClassName}`)) {
-      parentGroup = targ;
-    }
-    else {
-      parentGroup = targ.closest(`.${groupClassName}`);
-    }
-
-    // remove focus class from group wrapper and move the control bubble out of sight
-    parentGroup.classList.remove(focusClassName);
-
-    moveControlBubbleToBody();
-  }
+  elem.classList.remove(focusClassName);
 };
 
 let toggleReadItToMe = (e) => {
@@ -221,7 +116,6 @@ let toggleReadItToMe = (e) => {
     sessionStorage.removeItem('readItToMeDisabled');
     groupSelectorElements.forEach((elem) => {
       elem.classList.remove(ritmDisabledClassName);
-      makeElemTabable(elem);
     });
   }
   else {
@@ -257,7 +151,7 @@ let controlBarFocusOut = (e) => {
   }
 };
 
-let cancelAudio = () => {
+let cancelAudio = toFocus => function() {
   // optional track cancel event
   if (eventsBin.cancel) {
     try {
@@ -266,38 +160,17 @@ let cancelAudio = () => {
     catch (e) {}
   }
   // move focus to appropriate place, because the cancel button is about to disappear
-  if (controlBar.contains(this)) {
-    controlBar.focus();
-  }
-  if (controlBubble.contains(this)) {
-    controlBubble.focus();
+  if (toFocus.contains(this)) {
+    toFocus.focus();
   }
   cancel();
 };
 
 let attachEvents = () => {
-  controlBubble.querySelector('button.play-pause-resume').addEventListener('click', (e) => {
-    if (!ritmEnabled) {return false;}
-
-    e.stopPropagation();
-    let currentContentGroup = e.target.closest(`.${groupClassName}`);
-    contentGroupManager(currentContentGroup);
-  });
-  controlBubble.querySelector('button.cancel-audio').addEventListener('click', cancelAudio);
-
-  controlBar.querySelector('button').addEventListener('click', cancelAudio);
+  controlBar.querySelector('button').addEventListener('click', cancelAudio(controlBar));
   controlBar.querySelector('input.switch-input').addEventListener('change', toggleReadItToMe);
   controlBar.addEventListener('focusin', controlBarFocusIn);
   controlBar.addEventListener('focusout', controlBarFocusOut);
-
-  let groups = document.querySelectorAll(`.${groupClassName}`);
-  groups.forEach((elem) => {
-    elem.addEventListener('mouseenter', groupSelectorEnter);
-    elem.addEventListener('click', groupSelectorEnter);
-    elem.addEventListener('mouseleave', groupSelectorLeave);
-    elem.addEventListener('focusin', groupFocusInListener);
-    elem.addEventListener('focusout', groupFocusOutListener);
-  });
 };
 
 let contentGroupManager = (currentContentGroup) => {
@@ -432,10 +305,8 @@ export function init(selectors) {
           elem.classList.add(groupClassName);
         });
       }
-      // make all groups tabable
-      document.querySelectorAll(`.${groupClassName}`).forEach((elem) => {
-        makeElemTabable(elem);
-      });
+
+      setup();
     }
     else {
       // strip out classes that would apply ReadItToMe visuals
