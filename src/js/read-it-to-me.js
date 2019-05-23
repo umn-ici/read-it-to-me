@@ -1,15 +1,14 @@
 import '../scss/read-it-to-me.scss';
 
-let synth = window.speechSynthesis;
+import {initSynthesis} from './synthesis';
+
+let synth;
 const ritmDisabledClassName = 'ritm-disabled';
 const groupClassName = 'read-it-to-me-content-group';
 const focusClassName = 'focusin';
 let contentQueue = [];
 let controlBubble;
 let controlBar;
-let voices = [];
-let u;
-let timeoutID;
 let ritmEnabled = true;
 let eventsBin = {
   play: null,
@@ -19,16 +18,6 @@ let eventsBin = {
 };
 
 let setup = () => {
-  //populate voices [chrome currently will only do this in the context of the onvoiceschanged event]
-  voices = synth.getVoices();
-  if (voices.length === 0) {
-    if (synth.onvoiceschanged !== undefined) {
-      synth.onvoiceschanged = function () {
-        voices = synth.getVoices();
-      };
-    }
-  }
-
   addReadItToMeElements();
   attachEvents();
 
@@ -309,9 +298,6 @@ let attachEvents = () => {
     elem.addEventListener('focusin', groupFocusInListener);
     elem.addEventListener('focusout', groupFocusOutListener);
   });
-
-  // without this initial cancel, Chrome will pretty consistently fail to play the very first utterance (then works on every other utterance)
-  synth.cancel();
 };
 
 let contentGroupManager = (currentContentGroup) => {
@@ -397,36 +383,12 @@ let utteranceEnd = () => {
   if (contentQueue.length > 0) {
     play();
   }
-  //reset timeoutID
-  timeoutID = null;
 };
 
 let play = () => {
   // setup the new utterance
   let enhancedText = getPlainTextWithPsuedoSemantics(contentQueue[0].querySelector('.read-this-to-me'));
-  u = new SpeechSynthesisUtterance(enhancedText);
-  u.lang = 'en-US';
-  u.rate = .8;
-  //if voices is populated and the 'Samantha' voice is present on the browser/device, load her up, otherwise don't set a voice so the default is allowed to do it's thing.
-  if (voices.length > 0) {
-    for (let i = 0; i < voices.length; i++) {
-      if (voices[i].lang.indexOf('en') === 0) {
-        if (voices[i].name === 'Samantha') {
-          u.voice = voices[i];
-          break;
-        }
-      }
-    }
-  }
-  u.onend = utteranceEnd;
-  u.onerror = () => {
-    if (!timeoutID) {
-      timeoutID = window.setTimeout(utteranceEnd, 100);
-    }
-  };
-
-  // speak the new utterance
-  synth.speak(u);
+  synth.play({text: enhancedText}, utteranceEnd);
   showCancelButton();
   showControlBar();
 
@@ -455,28 +417,33 @@ let cancel = () => {
 };
 
 export function init(selectors) {
-  if (synth) {
-    // if custom selectors were passed in, give the associated elements the default group class
-    if (selectors && document.querySelectorAll(selectors).length > 0) {
-      document.querySelectorAll(selectors).forEach((elem) => {
-        elem.classList.add(groupClassName);
+  // If there's nothing to read, don't initialize
+  if (!((selectors && document.querySelectorAll(selectors).length > 0) || document.querySelectorAll(`.${groupClassName}`).length > 0)) {
+    return;
+  }
+
+  initSynthesis(undefined, (error, synthesis) => {
+    if (!error && synthesis) {
+      synth = synthesis;
+
+      // if custom selectors were passed in, give the associated elements the default group class
+      if (selectors && document.querySelectorAll(selectors).length > 0) {
+        document.querySelectorAll(selectors).forEach((elem) => {
+          elem.classList.add(groupClassName);
+        });
+      }
+      // make all groups tabable
+      document.querySelectorAll(`.${groupClassName}`).forEach((elem) => {
+        makeElemTabable(elem);
       });
     }
-    // make all groups tabable
-    document.querySelectorAll(`.${groupClassName}`).forEach((elem) => {
-      makeElemTabable(elem);
-    });
-    // preceed with setup if there is at least one group
-    if (document.querySelectorAll(`.${groupClassName}`)) {
-      setup();
+    else {
+      // strip out classes that would apply ReadItToMe visuals
+      document.querySelectorAll(`.${groupClassName}`).forEach((elem) => {
+        elem.classList.remove(groupClassName, focusClassName);
+      });
     }
-  }
-  else {
-    // strip out classes that would apply ReadItToMe visuals
-    document.querySelectorAll(`.${groupClassName}`).forEach((elem) => {
-      elem.classList.remove(groupClassName, focusClassName);
-    });
-  }
+  });
 }
 
 export function isEnabled () {
