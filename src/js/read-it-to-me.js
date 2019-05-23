@@ -1,6 +1,7 @@
 import '../scss/read-it-to-me.scss';
 
 import {initSynthesis} from './synthesis';
+import {createControlBar} from './control-bar';
 
 let synth;
 const ritmDisabledClassName = 'ritm-disabled';
@@ -18,12 +19,11 @@ let eventsBin = {
 
 let setup = () => {
   addReadItToMeElements();
-  attachEvents();
 
   // Toggle RITM off if set as disabled in sessionStorage
   if (sessionStorage.getItem('readItToMeDisabled')) {
-    controlBar.querySelector('input.switch-input').checked = false;
-    toggleReadItToMe();
+    controlBar.controlBar.querySelector('input.switch-input').checked = false;
+    setReadItToMe(false);
   }
 };
 
@@ -62,27 +62,11 @@ let addReadItToMeElements = () => {
   });
 
   // build the control bar
-  controlBar = document.createElement('div');
-  controlBar.classList.add('read-it-to-me-control-bar');
-  controlBar.setAttribute('tabindex', '0');
-  controlBar.setAttribute('aria-describedby', 'ritm-sr-message');
-  controlBar.innerHTML = `<div class="toggle-wrapper">
-                            <p class="visually-hidden" id="ritm-sr-message">Screen-reader users: there is a rudimentary "on-demand" read-aloud feature in use on this page called "Read-it-to-Me".  This new feature, which isn't meant as a screen-reader alternative, adds more tabable areas in the document which are great for keyboard users not using screen-readers, but are likely to be annoying for you. You can toggle off/on "Read-it-to-Me" using this checkbox.</p>
-                            <p class="read-it-to-me-label">Toggle Read-it-to-Me</p>
-                            <label class="switch" aria-label="Toggle Read-it-to-Me." aria-describedby="ritm-sr-message">
-                              <input type="checkbox" class="switch-input" checked>
-                              <span class="switch-outline"></span>
-                              <span class="switch-label" data-on="On" data-off="Off"></span>
-                              <span class="switch-handle"></span>
-                            </label>
-                          </div>
-                          <div class="cancel-audio-wrapper">
-                            <button type="button" class="btn btn-default btn-lg">Cancel audio</button>
-                          </div>`;
+  controlBar = createControlBar({cancelAudio, setReadItToMe});
 
   // append the control bar to body where it's least likely to be effected by layout styling and the control bubble so we can attach events to it.
   let docBody = document.body;
-  docBody.insertBefore(controlBar, docBody.firstChild);
+  docBody.insertBefore(controlBar.controlBar, docBody.firstChild);
 };
 
 let clearStrayFocus = () => {
@@ -108,10 +92,9 @@ const focusOutListener = elem => e => {
   elem.classList.remove(focusClassName);
 };
 
-let toggleReadItToMe = (e) => {
-  let toggleSwitch = e ? e.target : controlBar.querySelector('input.switch-input');
+let setReadItToMe = (enabled, logEvent) => {
   let groupSelectorElements = document.querySelectorAll(`.${groupClassName}`);
-  if (toggleSwitch.checked) {
+  if (enabled) {
     ritmEnabled = true;
     sessionStorage.removeItem('readItToMeDisabled');
     groupSelectorElements.forEach((elem) => {
@@ -132,22 +115,8 @@ let toggleReadItToMe = (e) => {
   }
 
   // optional track toggle event
-  if (e && eventsBin.toggle) {
-    eventsBin.toggle();
-  }
-};
-
-let controlBarFocusIn = (e) => {
-  if (e.target && controlBar.contains(e.target)) {
-    if (!controlBar.classList.contains('control-bar-show')) {
-      showControlBar();
-    }
-  }
-};
-
-let controlBarFocusOut = (e) => {
-  if ((e.relatedTarget && !controlBar.contains(e.relatedTarget)) || !e.relatedTarget) {
-    hideControlBar();
+  if (logEvent && eventsBin.toggle) {
+    eventsBin.toggle(enabled);
   }
 };
 
@@ -164,13 +133,6 @@ let cancelAudio = toFocus => function() {
     toFocus.focus();
   }
   cancel();
-};
-
-let attachEvents = () => {
-  controlBar.querySelector('button').addEventListener('click', cancelAudio(controlBar));
-  controlBar.querySelector('input.switch-input').addEventListener('change', toggleReadItToMe);
-  controlBar.addEventListener('focusin', controlBarFocusIn);
-  controlBar.addEventListener('focusout', controlBarFocusOut);
 };
 
 let contentGroupManager = (currentContentGroup) => {
@@ -199,22 +161,6 @@ let contentGroupManager = (currentContentGroup) => {
 let clearContentGroup = (contentGroup) => {
   contentGroup.classList.remove('read-it-to-me-play');
   contentGroup.classList.remove('read-it-to-me-pause');
-};
-
-let showCancelButton = () => {
-  controlBar.classList.add('show-ritm-cancel');
-};
-
-let hideCancelButton = () => {
-  controlBar.classList.remove('show-ritm-cancel');
-};
-
-let showControlBar = () => {
-  controlBar.classList.add('control-bar-show');
-};
-
-let hideControlBar = () => {
-  controlBar.classList.remove('control-bar-show');
 };
 
 let getPlainTextWithPsuedoSemantics = (textAncestor) => {
@@ -249,8 +195,8 @@ let getPlainTextWithPsuedoSemantics = (textAncestor) => {
 let utteranceEnd = () => {
   if (contentQueue.length > 0) {
     clearContentGroup(contentQueue[0]);
-    hideControlBar();
-    hideCancelButton();
+    controlBar.hideControlBar();
+    controlBar.hideCancelButton();
     contentQueue.shift();
   }
   if (contentQueue.length > 0) {
@@ -262,8 +208,8 @@ let play = () => {
   // setup the new utterance
   let enhancedText = getPlainTextWithPsuedoSemantics(contentQueue[0].querySelector('.read-this-to-me'));
   synth.play({text: enhancedText}, utteranceEnd);
-  showCancelButton();
-  showControlBar();
+  controlBar.showCancelButton();
+  controlBar.showControlBar();
 
   // optional track play event
   if (eventsBin.play) {
@@ -285,7 +231,7 @@ let resume = () => {
 };
 
 let cancel = () => {
-  hideCancelButton();
+  controlBar.hideCancelButton();
   synth.cancel();
 };
 
