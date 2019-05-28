@@ -3,6 +3,7 @@ import '../scss/read-it-to-me.scss';
 import {initSynthesis} from './synthesis';
 import {createControlBar} from './control-bar';
 import {createRITMGroup, PLAYING_STATE} from './group';
+import {initEventTracking} from './events';
 
 let synth;
 const ritmDisabledClassName = 'ritm-disabled';
@@ -13,12 +14,7 @@ let contentGroups = [];
 let currentGroup;
 let nextGroup;
 let ritmEnabled = true;
-let eventsBin = {
-  play: null,
-  pause: null,
-  cancel: null,
-  toggle: null
-};
+const {eventsBin, setHandlers} = initEventTracking();
 
 let setup = () => {
   addReadItToMeElements();
@@ -67,19 +63,14 @@ let setReadItToMe = (enabled, logEvent) => {
   contentGroups.forEach(group => group.setReadItToMe(ritmEnabled));
 
   // optional track toggle event
-  if (logEvent && eventsBin.toggle) {
+  if (logEvent) {
     eventsBin.toggle(enabled);
   }
 };
 
 let cancelAudio = toFocus => function() {
   // optional track cancel event
-  if (eventsBin.cancel) {
-    try {
-      eventsBin.cancel();
-    }
-    catch (e) {}
-  }
+  eventsBin.cancel();
   // move focus to appropriate place, because the cancel button is about to disappear
   if (toFocus.contains(this)) {
     toFocus.focus();
@@ -164,9 +155,7 @@ let play = () => {
   currentGroup.setState(PLAYING_STATE.PLAYING);
 
   // optional track play event
-  if (eventsBin.play) {
-    eventsBin.play();
-  }
+  eventsBin.play();
 };
 
 let pause = () => {
@@ -174,9 +163,7 @@ let pause = () => {
   currentGroup.setState(PLAYING_STATE.PAUSED);
 
   // optional track pause event
-  if (eventsBin.pause) {
-    eventsBin.pause();
-  }
+  eventsBin.pause();
 };
 
 let resume = () => {
@@ -225,19 +212,4 @@ export function currentUtteranceIdentifier() {
   return (currentGroup && currentGroup.ritmOptionalTrackingIdentifier) || false;
 }
 
-export function eventTracking(obj) {
-  if (obj) {
-    if (obj.play && typeof obj.play === 'function') {
-      eventsBin.play = obj.play;
-    }
-    if (obj.pause && typeof obj.pause === 'function') {
-      eventsBin.pause = obj.pause;
-    }
-    if (obj.cancel && typeof obj.cancel === 'function') {
-      eventsBin.cancel = obj.cancel;
-    }
-    if (obj.toggle && typeof obj.toggle === 'function') {
-      eventsBin.toggle = obj.toggle;
-    }
-  }
-}
+export const eventTracking = setHandlers;
