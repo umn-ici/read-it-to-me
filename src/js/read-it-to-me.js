@@ -2,13 +2,16 @@ import '../scss/read-it-to-me.scss';
 
 import {initSynthesis} from './synthesis';
 import {createControlBar} from './control-bar';
+import {createRITMGroup, PLAYING_STATE} from './group';
 
 let synth;
 const ritmDisabledClassName = 'ritm-disabled';
 const groupClassName = 'read-it-to-me-content-group';
 const focusClassName = 'focusin';
-let contentQueue = [];
 let controlBar;
+let contentGroups = [];
+let currentGroup;
+let nextGroup;
 let ritmEnabled = true;
 let eventsBin = {
   play: null,
@@ -27,37 +30,13 @@ let setup = () => {
 };
 
 let addReadItToMeElements = () => {
-  // build the control bubble
-  const controlBubble = document.createElement('div');
-  controlBubble.classList.add('read-it-to-me-control-bubble');
-  controlBubble.tabIndex = -1;
-  controlBubble.innerHTML = '<p class="read-it-to-me-label"></p><button type="button" class="play-pause-resume"></button><button type="button" class="cancel-audio"><span class="visually-hidden">Cancel audio</a></button>';
-
   const groupSelectorElements = document.querySelectorAll(`.${groupClassName}`);
-  // Inner wrap each readable group in a new div.read-this-to-me
-  const wrapSource = document.createElement('div');
-  wrapSource.classList.add('read-this-to-me');
   groupSelectorElements.forEach((elem) => {
-    let wrapper = wrapSource.cloneNode(false);
-    elem.appendChild(wrapper);
-    while (elem.firstChild !== wrapper) {
-      wrapper.appendChild(elem.firstChild);
-    }
+    const text = () => getPlainTextWithPsuedoSemantics(elem.querySelector('.read-this-to-me'));
+    const ritmOptionalTrackingIdentifier = elem.dataset.ritmOptionalTrackingIdentifier || false;
+    const group = createRITMGroup({playPauseGroup, cancelAudio, focusClassName, ritmDisabledClassName, elem, ritmOptionalTrackingIdentifier, text}, {document});
 
-    const clonedControlBubble = controlBubble.cloneNode(true);
-
-    clonedControlBubble.addEventListener('focusin', focusInListener(elem));
-    clonedControlBubble.addEventListener('focusout', focusOutListener(elem));
-    clonedControlBubble.querySelector('button.play-pause-resume').addEventListener('click', (e) => {
-      if (!ritmEnabled) {return false;}
-
-      e.stopPropagation();
-      let currentContentGroup = e.target.closest(`.${groupClassName}`);
-      contentGroupManager(currentContentGroup);
-    });
-    clonedControlBubble.querySelector('button.cancel-audio').addEventListener('click', cancelAudio(clonedControlBubble));
-
-    elem.insertBefore(clonedControlBubble, wrapper);
+    contentGroups.push(group);
   });
 
   // build the control bar
@@ -71,45 +50,21 @@ let clearStrayFocus = () => {
   }
 };
 
-const focusInListener = elem => e => {
-  if (!ritmEnabled) {return false;}
-
-  // don't want this bubbling up from nested groups
-  e.stopPropagation();
-
-  elem.classList.add(focusClassName);
-};
-
-const focusOutListener = elem => e => {
-  // don't want this bubbling up from nested groups
-  e.stopPropagation();
-
-  elem.classList.remove(focusClassName);
-};
-
 let setReadItToMe = (enabled, logEvent) => {
-  let groupSelectorElements = document.querySelectorAll(`.${groupClassName}`);
   if (enabled) {
     ritmEnabled = true;
     sessionStorage.removeItem('readItToMeDisabled');
-    groupSelectorElements.forEach((elem) => {
-      elem.classList.remove(ritmDisabledClassName);
-    });
   }
   else {
     ritmEnabled = false;
     clearStrayFocus();
+    nextGroup = null;
     synth.cancel();
     sessionStorage.setItem('readItToMeDisabled', '1');
-    groupSelectorElements.forEach((elem) => {
-      elem.classList.add(ritmDisabledClassName);
-      if (!elem.classList.contains('ritm-do-not-strip-tabindex')) {
-        elem.removeAttribute('tabindex');
-      }
-    });
   }
 
   controlBar.setReadItToMe(ritmEnabled);
+  contentGroups.forEach(group => group.setReadItToMe(ritmEnabled));
 
   // optional track toggle event
   if (logEvent && eventsBin.toggle) {
@@ -132,32 +87,25 @@ let cancelAudio = toFocus => function() {
   cancel();
 };
 
-let contentGroupManager = (currentContentGroup) => {
-  if (!currentContentGroup.classList.contains('read-it-to-me-play') && !currentContentGroup.classList.contains('read-it-to-me-pause')) {
-    contentQueue.push(currentContentGroup);
-    if (document.querySelectorAll('.read-it-to-me-play').length > 0 || document.querySelectorAll('.read-it-to-me-pause').length > 0) {
+let playPauseGroup = (group) => {
+  if (currentGroup === group) {
+    if (group.state === PLAYING_STATE.STOPPED) {
+      // currentGroup === group and the group being stopped should never occur. But, just in case, we'll handle it
+      nextGroup = group;
+      utteranceEnd();
+    } else if (group.state === PLAYING_STATE.PAUSED) {
+      resume();
+    } else if (group.state === PLAYING_STATE.PLAYING) {
+      pause();
+    }
+  } else {
+    nextGroup = group;
+    if (currentGroup) {
       cancel();
+    } else {
+      utteranceEnd();
     }
-    else {
-      play();
-    }
-    currentContentGroup.classList.toggle('read-it-to-me-play');
   }
-  else if (currentContentGroup.classList.contains('read-it-to-me-play')) {
-    pause();
-    currentContentGroup.classList.toggle('read-it-to-me-play');
-    currentContentGroup.classList.toggle('read-it-to-me-pause');
-  }
-  else if (currentContentGroup.classList.contains('read-it-to-me-pause')) {
-    resume();
-    currentContentGroup.classList.toggle('read-it-to-me-play');
-    currentContentGroup.classList.toggle('read-it-to-me-pause');
-  }
-};
-
-let clearContentGroup = (contentGroup) => {
-  contentGroup.classList.remove('read-it-to-me-play');
-  contentGroup.classList.remove('read-it-to-me-pause');
 };
 
 let getPlainTextWithPsuedoSemantics = (textAncestor) => {
@@ -190,23 +138,30 @@ let getPlainTextWithPsuedoSemantics = (textAncestor) => {
 };
 
 let utteranceEnd = () => {
-  if (contentQueue.length > 0) {
-    clearContentGroup(contentQueue[0]);
+  if (currentGroup) {
+    currentGroup.setState(PLAYING_STATE.STOPPED);
+    currentGroup = null;
     controlBar.hideControlBar();
     controlBar.hideCancelButton();
-    contentQueue.shift();
   }
-  if (contentQueue.length > 0) {
+
+  if (nextGroup) {
+    currentGroup = nextGroup;
+    nextGroup = null;
+  }
+
+  if (currentGroup) {
     play();
   }
 };
 
 let play = () => {
   // setup the new utterance
-  let enhancedText = getPlainTextWithPsuedoSemantics(contentQueue[0].querySelector('.read-this-to-me'));
+  let enhancedText = currentGroup.text();
   synth.play({text: enhancedText}, utteranceEnd);
   controlBar.showCancelButton();
   controlBar.showControlBar();
+  currentGroup.setState(PLAYING_STATE.PLAYING);
 
   // optional track play event
   if (eventsBin.play) {
@@ -216,6 +171,7 @@ let play = () => {
 
 let pause = () => {
   synth.pause();
+  currentGroup.setState(PLAYING_STATE.PAUSED);
 
   // optional track pause event
   if (eventsBin.pause) {
@@ -225,6 +181,7 @@ let pause = () => {
 
 let resume = () => {
   synth.resume();
+  currentGroup.setState(PLAYING_STATE.PLAYING);
 };
 
 let cancel = () => {
@@ -265,10 +222,7 @@ export function isEnabled () {
 }
 
 export function currentUtteranceIdentifier() {
-  if (contentQueue[0] && contentQueue[0].dataset.ritmOptionalTrackingIdentifier && contentQueue[0].dataset.ritmOptionalTrackingIdentifier !== "") {
-    return contentQueue[0].dataset.ritmOptionalTrackingIdentifier;
-  }
-  return false;
+  return (currentGroup && currentGroup.ritmOptionalTrackingIdentifier) || false;
 }
 
 export function eventTracking(obj) {
