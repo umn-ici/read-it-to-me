@@ -11,7 +11,6 @@ const groupClassName = 'read-it-to-me-content-group';
 const focusClassName = 'focusin';
 let controlBar;
 let contentGroups = [];
-let currentGroup;
 let nextGroup;
 let ritmEnabled = true;
 const {eventsBin, setHandlers} = initEventTracking();
@@ -79,22 +78,18 @@ let cancelAudio = toFocus => function() {
 };
 
 let playPauseGroup = (group) => {
-  if (currentGroup === group) {
-    if (group.state === PLAYING_STATE.STOPPED) {
-      // currentGroup === group and the group being stopped should never occur. But, just in case, we'll handle it
-      nextGroup = group;
-      utteranceEnd();
-    } else if (group.state === PLAYING_STATE.PAUSED) {
+  if (synth.currentUtterance && synth.currentUtterance.config.group === group && group.state !== PLAYING_STATE.STOPPED) {
+    if (group.state === PLAYING_STATE.PAUSED) {
       resume();
     } else if (group.state === PLAYING_STATE.PLAYING) {
       pause();
     }
   } else {
     nextGroup = group;
-    if (currentGroup) {
+    if (synth.currentUtterance) {
       cancel();
     } else {
-      utteranceEnd();
+      play();
     }
   }
 };
@@ -128,47 +123,46 @@ let getPlainTextWithPsuedoSemantics = (textAncestor) => {
   return clonedTextAncestor.textContent;
 };
 
-let utteranceEnd = () => {
-  if (currentGroup) {
-    currentGroup.setState(PLAYING_STATE.STOPPED);
-    currentGroup = null;
-    controlBar.hideControlBar();
-    controlBar.hideCancelButton();
-  }
+let utteranceEnd = (e, config) => {
+  config.group.setState(PLAYING_STATE.STOPPED);
 
   if (nextGroup) {
-    currentGroup = nextGroup;
-    nextGroup = null;
-  }
-
-  if (currentGroup) {
     play();
+  } else {
+    controlBar.hideControlBar();
+    controlBar.hideCancelButton();
   }
 };
 
 let play = () => {
   // setup the new utterance
-  let enhancedText = currentGroup.text();
-  synth.play({text: enhancedText}, utteranceEnd);
+  const config = {text: nextGroup.text(), group: nextGroup};
+  nextGroup.setState(PLAYING_STATE.PLAYING);
+  nextGroup = null;
+
+  synth.play(config, utteranceEnd);
   controlBar.showCancelButton();
   controlBar.showControlBar();
-  currentGroup.setState(PLAYING_STATE.PLAYING);
 
   // optional track play event
   eventsBin.play();
 };
 
 let pause = () => {
-  synth.pause();
-  currentGroup.setState(PLAYING_STATE.PAUSED);
+  if (synth.currentUtterance) {
+    synth.pause();
+    synth.currentUtterance.config.group.setState(PLAYING_STATE.PAUSED);
 
-  // optional track pause event
-  eventsBin.pause();
+    // optional track pause event
+    eventsBin.pause();
+  }
 };
 
 let resume = () => {
-  synth.resume();
-  currentGroup.setState(PLAYING_STATE.PLAYING);
+  if (synth.currentUtterance) {
+    synth.resume();
+    synth.currentUtterance.config.group.setState(PLAYING_STATE.PLAYING);
+  }
 };
 
 let cancel = () => {
@@ -209,7 +203,7 @@ export function isEnabled () {
 }
 
 export function currentUtteranceIdentifier() {
-  return (currentGroup && currentGroup.ritmOptionalTrackingIdentifier) || false;
+  return (synth.currentUtterance && synth.currentUtterance.config.group.ritmOptionalTrackingIdentifier) || false;
 }
 
 export const eventTracking = setHandlers;

@@ -26,11 +26,18 @@ export function initSynthesis(synth, callback) {
       }
     }
 
-    u.onend = () => callback(null, config);
+    function utteranceFinished(error) {
+      thisUtterance.finished = true;
+      result.currentUtterance = null;
 
-    u.onerror = event => {
-      setTimeout(() => callback(event.error || new Error('Unknown speech synthesis error'), config), 100);
-    };
+      setTimeout(() => callback(error, config), 100);
+    }
+
+    u.onend = () => utteranceFinished();
+
+    u.onerror = event => utteranceFinished(event);
+
+    const thisUtterance = result.currentUtterance = {u, config};
 
     // speak the new utterance
     synth.speak(u);
