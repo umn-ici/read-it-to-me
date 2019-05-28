@@ -1,6 +1,6 @@
-export function createControlBar({cancelAudio, setReadItToMe}) {
+export function createControlBar({cancelAudio, setReadItToMe}, {document, controlBarElement}) {
   // build the control bar
-  const controlBar = document.createElement('div');
+  const controlBar = controlBarElement || document.createElement('div');
   controlBar.classList.add('read-it-to-me-control-bar');
   controlBar.setAttribute('tabindex', '0');
   controlBar.setAttribute('aria-describedby', 'ritm-sr-message');
@@ -18,11 +18,16 @@ export function createControlBar({cancelAudio, setReadItToMe}) {
                             <button type="button" class="btn btn-default btn-lg">Cancel audio</button>
                           </div>`;
 
-  let toggleReadItToMe = (e) => {
+  const cancelButton = controlBar.querySelector('button');
+  const inputSwitch = controlBar.querySelector('input.switch-input');
+
+  const toggleReadItToMe = (e) => {
     setReadItToMe(e.target.checked, true);
   };
 
-  let controlBarFocusIn = (e) => {
+  const setReadItToMeStatus = status => inputSwitch.checked = status;
+
+  const controlBarFocusIn = (e) => {
     if (e.target && controlBar.contains(e.target)) {
       if (!controlBar.classList.contains('control-bar-show')) {
         showControlBar();
@@ -30,38 +35,44 @@ export function createControlBar({cancelAudio, setReadItToMe}) {
     }
   };
 
-  let controlBarFocusOut = (e) => {
+  const controlBarFocusOut = (e) => {
     if ((e.relatedTarget && !controlBar.contains(e.relatedTarget)) || !e.relatedTarget) {
       hideControlBar();
     }
   };
 
-  let showCancelButton = () => {
+  const showCancelButton = () => {
     controlBar.classList.add('show-ritm-cancel');
   };
 
-  let hideCancelButton = () => {
+  const hideCancelButton = () => {
     controlBar.classList.remove('show-ritm-cancel');
   };
 
-  let showControlBar = () => {
+  const showControlBar = () => {
     controlBar.classList.add('control-bar-show');
   };
 
-  let hideControlBar = () => {
+  const hideControlBar = () => {
     controlBar.classList.remove('control-bar-show');
   };
 
-  controlBar.querySelector('button').addEventListener('click', cancelAudio(controlBar));
-  controlBar.querySelector('input.switch-input').addEventListener('change', toggleReadItToMe);
+  cancelButton.addEventListener('click', cancelAudio(controlBar));
+  inputSwitch.addEventListener('change', toggleReadItToMe);
   controlBar.addEventListener('focusin', controlBarFocusIn);
   controlBar.addEventListener('focusout', controlBarFocusOut);
 
+  if (!controlBarElement) {
+    // append the control bar to body where it's least likely to be effected by layout styling and the control bubble so we can attach events to it.
+    let docBody = document.body;
+    docBody.insertBefore(controlBar, docBody.firstChild);
+  }
+
   return {
-    controlBar,
     showCancelButton,
     hideCancelButton,
     showControlBar,
-    hideControlBar
+    hideControlBar,
+    setReadItToMe: setReadItToMeStatus
   };
 }

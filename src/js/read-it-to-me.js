@@ -22,7 +22,6 @@ let setup = () => {
 
   // Toggle RITM off if set as disabled in sessionStorage
   if (sessionStorage.getItem('readItToMeDisabled')) {
-    controlBar.controlBar.querySelector('input.switch-input').checked = false;
     setReadItToMe(false);
   }
 };
@@ -62,11 +61,7 @@ let addReadItToMeElements = () => {
   });
 
   // build the control bar
-  controlBar = createControlBar({cancelAudio, setReadItToMe});
-
-  // append the control bar to body where it's least likely to be effected by layout styling and the control bubble so we can attach events to it.
-  let docBody = document.body;
-  docBody.insertBefore(controlBar.controlBar, docBody.firstChild);
+  controlBar = createControlBar({cancelAudio, setReadItToMe}, {document});
 };
 
 let clearStrayFocus = () => {
@@ -113,6 +108,8 @@ let setReadItToMe = (enabled, logEvent) => {
       }
     });
   }
+
+  controlBar.setReadItToMe(ritmEnabled);
 
   // optional track toggle event
   if (logEvent && eventsBin.toggle) {
