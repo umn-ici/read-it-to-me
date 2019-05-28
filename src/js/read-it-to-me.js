@@ -1,41 +1,21 @@
-import '../scss/read-it-to-me.scss';
-
 import {initSynthesis} from './synthesis';
-import {createControlBar} from './control-bar';
-import {createRITMGroup, PLAYING_STATE} from './group';
+import {PLAYING_STATE} from './group';
 import {initEventTracking} from './events';
+import {focusClassName} from './utils';
 
 let synth;
-const ritmDisabledClassName = 'ritm-disabled';
-const groupClassName = 'read-it-to-me-content-group';
-const focusClassName = 'focusin';
-let controlBar;
-let contentGroups = [];
+let ui;
 let nextGroup;
 let ritmEnabled = true;
 const {eventsBin, setHandlers} = initEventTracking();
 
-let setup = () => {
-  addReadItToMeElements();
+let setup = (uiConfig) => {
+  ui = uiConfig;
 
   // Toggle RITM off if set as disabled in sessionStorage
   if (sessionStorage.getItem('readItToMeDisabled')) {
     setReadItToMe(false);
   }
-};
-
-let addReadItToMeElements = () => {
-  const groupSelectorElements = document.querySelectorAll(`.${groupClassName}`);
-  groupSelectorElements.forEach((elem) => {
-    const text = () => getPlainTextWithPsuedoSemantics(elem.querySelector('.read-this-to-me'));
-    const ritmOptionalTrackingIdentifier = elem.dataset.ritmOptionalTrackingIdentifier || false;
-    const group = createRITMGroup({playPauseGroup, cancelAudio, focusClassName, ritmDisabledClassName, elem, ritmOptionalTrackingIdentifier, text}, {document});
-
-    contentGroups.push(group);
-  });
-
-  // build the control bar
-  controlBar = createControlBar({cancelAudio, setReadItToMe}, {document});
 };
 
 let clearStrayFocus = () => {
@@ -58,8 +38,7 @@ let setReadItToMe = (enabled, logEvent) => {
     sessionStorage.setItem('readItToMeDisabled', '1');
   }
 
-  controlBar.setReadItToMe(ritmEnabled);
-  contentGroups.forEach(group => group.setReadItToMe(ritmEnabled));
+  ui.setReadItToMe(ritmEnabled);
 
   // optional track toggle event
   if (logEvent) {
@@ -94,43 +73,14 @@ let playPauseGroup = (group) => {
   }
 };
 
-let getPlainTextWithPsuedoSemantics = (textAncestor) => {
-  // In a copy of the node list, pepper in (dramatically misuse, hehe) some punctuation for the purpose of adding meaningful pauses and 'emphasis' during text readout.
-  let clonedTextAncestor = textAncestor.cloneNode(true);
-  clonedTextAncestor.querySelectorAll('p, li, abbr, strong, em, h1, h2, h3, h4, h5, h6').forEach((elem) => {
-    let tag = elem.tagName.toUpperCase();
-    if (tag === 'P') {
-      elem.appendChild(document.createTextNode('. '));
-    }
-    else if (tag === "ABBR") {
-      let elemText = elem.textContent;
-      let arr = elemText.split('');
-      elem.textContent = arr.join('.');
-    }
-    else if (tag === 'STRONG' || tag === 'EM') {
-      elem.insertBefore(document.createTextNode(', '), elem.firstChild);
-      elem.appendChild(document.createTextNode(', '));
-    }
-    else if (tag === 'LI') {
-      elem.appendChild(document.createTextNode(', '));
-    }
-    else if (tag === 'H1' || tag === 'H2' || tag === 'H3' || tag === 'H4' || tag === 'H5' || tag === 'H6') {
-      elem.appendChild(document.createTextNode(', '));
-    }
-  });
-
-  // return the modified text
-  return clonedTextAncestor.textContent;
-};
-
 let utteranceEnd = (e, config) => {
   config.group.setState(PLAYING_STATE.STOPPED);
 
   if (nextGroup) {
     play();
   } else {
-    controlBar.hideControlBar();
-    controlBar.hideCancelButton();
+    ui.hideControlBar();
+    ui.hideCancelButton();
   }
 };
 
@@ -141,8 +91,8 @@ let play = () => {
   nextGroup = null;
 
   synth.play(config, utteranceEnd);
-  controlBar.showCancelButton();
-  controlBar.showControlBar();
+  ui.showCancelButton();
+  ui.showControlBar();
 
   // optional track play event
   eventsBin.play();
@@ -166,35 +116,25 @@ let resume = () => {
 };
 
 let cancel = () => {
-  controlBar.hideCancelButton();
+  ui.hideCancelButton();
   synth.cancel();
 };
 
-export function init(selectors) {
-  // If there's nothing to read, don't initialize
-  if (!((selectors && document.querySelectorAll(selectors).length > 0) || document.querySelectorAll(`.${groupClassName}`).length > 0)) {
-    return;
-  }
-
+export function init(setupUI, callback) {
   initSynthesis(undefined, (error, synthesis) => {
     if (!error && synthesis) {
       synth = synthesis;
 
-      // if custom selectors were passed in, give the associated elements the default group class
-      if (selectors && document.querySelectorAll(selectors).length > 0) {
-        document.querySelectorAll(selectors).forEach((elem) => {
-          elem.classList.add(groupClassName);
-        });
-      }
+      const config = setupUI({playPauseGroup, cancelAudio, setReadItToMe});
 
-      setup();
+      if (!(config && config.hideControlBar && config.hideCancelButton && config.showCancelButton && config.showControlBar && config.setReadItToMe)) {
+        error = new Error('UI library did not provide necessary callbacks.');
+      } else {
+        setup(config);
+      }
     }
-    else {
-      // strip out classes that would apply ReadItToMe visuals
-      document.querySelectorAll(`.${groupClassName}`).forEach((elem) => {
-        elem.classList.remove(groupClassName, focusClassName);
-      });
-    }
+
+    callback(error);
   });
 }
 

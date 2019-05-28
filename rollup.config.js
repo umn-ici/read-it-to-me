@@ -13,7 +13,7 @@ const browsers = Object.entries(caniuse.getSupport('speech-synthesis')).map(
 
 export default [
   {
-    input: 'src/js/read-it-to-me.js',
+    input: 'src/js/index.js',
     output: [
       {file: pkg.main, format: 'cjs'},
       {file: pkg.module, format: 'es'},
