@@ -1,8 +1,4 @@
-export const PLAYING_STATE = {
-  STOPPED: 0,
-  PAUSED: 1,
-  PLAYING: 2
-};
+import {PLAYING_STATE} from './utils';
 
 export function createRITMGroup({playPauseGroup, cancelAudio, focusClassName, ritmDisabledClassName, ritmOptionalTrackingIdentifier, elem, text}, {wrapperElement, controlBubbleElement, document}) {
   // Inner wrap each readable group in a new div.read-this-to-me

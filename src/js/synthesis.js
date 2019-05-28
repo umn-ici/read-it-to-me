@@ -1,3 +1,5 @@
+import {PLAYING_STATE} from './utils';
+
 export function initSynthesis(synth, callback) {
   let voices = [], failedToLoadVoices = false;
 
@@ -26,21 +28,40 @@ export function initSynthesis(synth, callback) {
       }
     }
 
-    function utteranceFinished(error) {
-      thisUtterance.finished = true;
-      result.currentUtterance = null;
+    result.nextUttarance = {u, config, callback};
 
-      setTimeout(() => callback(error, config), 100);
+    if (!result.currentUtterance) {
+      playNextUtterance();
+    } else {
+      synth.cancel();
+    }
+  };
+
+  let playNextUtterance = () => {
+    const thisUtterance = result.currentUtterance = result.nextUttarance;
+    result.nextUttarance = null;
+
+    function utteranceFinished(error) {
+      thisUtterance.callback(error, PLAYING_STATE.STOPPED, thisUtterance.config);
+      if (result.nextUttarance) {
+        playNextUtterance();
+      } else {
+        result.currentUtterance = null;
+      }
     }
 
-    u.onend = () => utteranceFinished();
+    thisUtterance.u.onend = () => setTimeout(utteranceFinished, 100);
 
-    u.onerror = event => utteranceFinished(event);
+    thisUtterance.u.onerror = event => setTimeout(utteranceFinished.bind(null, event.error || new Error('Unknown speech synthesis error')), 100);
 
-    const thisUtterance = result.currentUtterance = {u, config};
+    thisUtterance.u.onstart = () => thisUtterance.callback(null, PLAYING_STATE.PLAYING, thisUtterance.config);
+
+    thisUtterance.u.onpause = () => thisUtterance.callback(null, PLAYING_STATE.PAUSED, thisUtterance.config);
+
+    thisUtterance.u.onresume = () => thisUtterance.callback(null, PLAYING_STATE.PLAYING, thisUtterance.config);
 
     // speak the new utterance
-    synth.speak(u);
+    synth.speak(thisUtterance.u);
   };
 
   let pause = () => {

@@ -2,6 +2,12 @@ export const ritmDisabledClassName = 'ritm-disabled';
 export const groupClassName = 'read-it-to-me-content-group';
 export const focusClassName = 'focusin';
 
+export const PLAYING_STATE = {
+  STOPPED: 0,
+  PAUSED: 1,
+  PLAYING: 2
+};
+
 export let getPlainTextWithPsuedoSemantics = (textAncestor) => {
   // In a copy of the node list, pepper in (dramatically misuse, hehe) some punctuation for the purpose of adding meaningful pauses and 'emphasis' during text readout.
   let clonedTextAncestor = textAncestor.cloneNode(true);

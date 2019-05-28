@@ -1,11 +1,9 @@
 import {initSynthesis} from './synthesis';
-import {PLAYING_STATE} from './group';
 import {initEventTracking} from './events';
-import {focusClassName} from './utils';
+import {PLAYING_STATE, focusClassName} from './utils';
 
 let synth;
 let ui;
-let nextGroup;
 let ritmEnabled = true;
 const {eventsBin, setHandlers} = initEventTracking();
 
@@ -33,7 +31,6 @@ let setReadItToMe = (enabled, logEvent) => {
   else {
     ritmEnabled = false;
     clearStrayFocus();
-    nextGroup = null;
     synth.cancel();
     sessionStorage.setItem('readItToMeDisabled', '1');
   }
@@ -53,71 +50,43 @@ let cancelAudio = toFocus => function() {
   if (toFocus.contains(this)) {
     toFocus.focus();
   }
-  cancel();
+  synth.cancel();
 };
 
 let playPauseGroup = (group) => {
   if (synth.currentUtterance && synth.currentUtterance.config.group === group && group.state !== PLAYING_STATE.STOPPED) {
     if (group.state === PLAYING_STATE.PAUSED) {
-      resume();
+      synth.resume();
     } else if (group.state === PLAYING_STATE.PLAYING) {
-      pause();
+      synth.pause();
     }
   } else {
-    nextGroup = group;
-    if (synth.currentUtterance) {
-      cancel();
-    } else {
-      play();
-    }
+    // setup the new utterance
+    const config = {text: group.text(), group, playTracked: false};
+
+    synth.play(config, utteranceUpdated);
   }
 };
 
-let utteranceEnd = (e, config) => {
-  config.group.setState(PLAYING_STATE.STOPPED);
+let utteranceUpdated = (e, state, config) => {
+  config.group.setState(state);
 
-  if (nextGroup) {
-    play();
-  } else {
+  if (state === PLAYING_STATE.STOPPED) {
     ui.hideControlBar();
     ui.hideCancelButton();
+  } else {
+    ui.showControlBar();
+    ui.showCancelButton();
   }
-};
 
-let play = () => {
-  // setup the new utterance
-  const config = {text: nextGroup.text(), group: nextGroup};
-  nextGroup.setState(PLAYING_STATE.PLAYING);
-  nextGroup = null;
-
-  synth.play(config, utteranceEnd);
-  ui.showCancelButton();
-  ui.showControlBar();
-
-  // optional track play event
-  eventsBin.play();
-};
-
-let pause = () => {
-  if (synth.currentUtterance) {
-    synth.pause();
-    synth.currentUtterance.config.group.setState(PLAYING_STATE.PAUSED);
-
-    // optional track pause event
+  if (state === PLAYING_STATE.PLAYING) {
+    if (!config.playTracked) {
+      eventsBin.play();
+      config.playTracked = true;
+    }
+  } else if (state === PLAYING_STATE.PAUSED) {
     eventsBin.pause();
   }
-};
-
-let resume = () => {
-  if (synth.currentUtterance) {
-    synth.resume();
-    synth.currentUtterance.config.group.setState(PLAYING_STATE.PLAYING);
-  }
-};
-
-let cancel = () => {
-  ui.hideCancelButton();
-  synth.cancel();
 };
 
 export function init(setupUI, callback) {
