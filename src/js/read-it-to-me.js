@@ -23,7 +23,7 @@ let clearStrayFocus = () => {
   }
 };
 
-let setReadItToMe = (enabled, logEvent) => {
+export let setReadItToMe = (enabled, logEvent) => {
   if (enabled) {
     ritmEnabled = true;
     sessionStorage.removeItem('readItToMeDisabled');
@@ -43,9 +43,9 @@ let setReadItToMe = (enabled, logEvent) => {
   }
 };
 
-let cancelAudio = toFocus => function() {
+export let cancelAudio = toFocus => function() {
   // optional track cancel event
-  eventsBin.cancel();
+  eventsBin.cancel(synth.currentUtterance && synth.currentUtterance.config.group.ritmOptionalTrackingIdentifier);
   // move focus to appropriate place, because the cancel button is about to disappear
   if (toFocus.contains(this)) {
     toFocus.focus();
@@ -53,7 +53,7 @@ let cancelAudio = toFocus => function() {
   synth.cancel();
 };
 
-let playPauseGroup = (group) => {
+export let playPauseGroup = (group) => {
   if (synth.currentUtterance && synth.currentUtterance.config.group === group && group.state !== PLAYING_STATE.STOPPED) {
     if (group.state === PLAYING_STATE.PAUSED) {
       synth.resume();
@@ -81,11 +81,11 @@ let utteranceUpdated = (e, state, config) => {
 
   if (state === PLAYING_STATE.PLAYING) {
     if (!config.playTracked) {
-      eventsBin.play();
+      eventsBin.play(config.group.ritmOptionalTrackingIdentifier);
       config.playTracked = true;
     }
   } else if (state === PLAYING_STATE.PAUSED) {
-    eventsBin.pause();
+    eventsBin.pause(config.group.ritmOptionalTrackingIdentifier);
   }
 };
 
@@ -94,7 +94,7 @@ export function init(setupUI, callback) {
     if (!error && synthesis) {
       synth = synthesis;
 
-      const config = setupUI({playPauseGroup, cancelAudio, setReadItToMe});
+      const config = setupUI();
 
       if (!(config && config.hideControlBar && config.hideCancelButton && config.showCancelButton && config.showControlBar && config.setReadItToMe)) {
         error = new Error('UI library did not provide necessary callbacks.');

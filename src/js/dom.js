@@ -1,3 +1,4 @@
+import {playPauseGroup, cancelAudio, setReadItToMe} from './read-it-to-me';
 import {createControlBar} from './control-bar';
 import {createRITMGroup} from './group';
 import {getPlainTextWithPsuedoSemantics, groupClassName, focusClassName, ritmDisabledClassName} from './utils';
@@ -8,7 +9,7 @@ export function init(initRITM, selectors) {
     return;
   }
 
-  function setupUI({playPauseGroup, cancelAudio, setReadItToMe}) {
+  function setupUI() {
     // if custom selectors were passed in, give the associated elements the default group class
     if (selectors && document.querySelectorAll(selectors).length > 0) {
       document.querySelectorAll(selectors).forEach((elem) => {

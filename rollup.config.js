@@ -17,7 +17,7 @@ export default [
     output: [
       {file: pkg.main, format: 'cjs'},
       {file: pkg.module, format: 'es'},
-      {name: 'ReadItToMe', file: pkg.browser, format: 'umd'}
+      {name: 'ReadItToMe', file: pkg.browser, format: 'umd', globals: {react: 'React'}}
     ],
     plugins: [
       resolve(),
@@ -32,6 +32,7 @@ export default [
         presets: [['@babel/preset-env', {targets: browsers}]]
       }),
       terser()
-    ]
+    ],
+    external: ['react']
   }
 ];
