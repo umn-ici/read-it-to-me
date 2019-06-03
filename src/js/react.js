@@ -1,4 +1,4 @@
-import {playPauseGroup, cancelAudio, setReadItToMe, init as initRITM, eventTracking} from './read-it-to-me';
+import {playPauseGroup, cancelAudio, setReadItToMe, init as initRITM, isEnabled, eventTracking} from './read-it-to-me';
 import {createControlBar} from './control-bar';
 import {createRITMGroup} from './group';
 import {getPlainTextWithPsuedoSemantics, groupClassName, focusClassName, ritmDisabledClassName} from './utils';
@@ -13,10 +13,18 @@ if (typeof React !== 'undefined') {
   ControlContext = class extends React.Component {
     constructor(props) {
       super(props);
-      this.state = {ritm: true};
+      this.state = {
+        ritm: false,
+        onGroupMounted: this.onGroupMounted.bind(this)
+      };
     }
 
-    componentDidMount() {
+    onGroupMounted() {
+      if (this.initialized) {
+        return;
+      }
+      this.initialized = true;
+
       initRITM(() => {
         this.controlBar = createControlBar({cancelAudio, setReadItToMe}, {document});
 
@@ -27,7 +35,12 @@ if (typeof React !== 'undefined') {
           showControlBar: this.controlBar.showControlBar,
           setReadItToMe: this.uiSetReadItToMe.bind(this)
         };
-      }, () => {});
+      }, err => {
+        if (!err && isEnabled()) {
+          this.setState({ritm: isEnabled()});
+        }
+      });
+
       eventTracking({
         play: this.onPlay.bind(this),
         pause: this.onPause.bind(this),
@@ -74,7 +87,7 @@ if (typeof React !== 'undefined') {
     }
 
     render() {
-      return React.createElement(Context.Provider, {value: this.state.ritm}, this.props.children);
+      return React.createElement(Context.Provider, {value: this.state}, this.props.children);
     }
   };
 
@@ -84,8 +97,8 @@ if (typeof React !== 'undefined') {
       this.componentRender = this.componentRender.bind(this);
     }
 
-    componentRender(ritmState) {
-      return React.createElement(ContentGroupComponent, {...this.props, ritmState}, this.props.children);
+    componentRender({ritm: ritmState, onGroupMounted}) {
+      return React.createElement(ContentGroupComponent, {...this.props, ritmState, onGroupMounted}, this.props.children);
     }
 
     render() {
@@ -103,6 +116,8 @@ if (typeof React !== 'undefined') {
         {wrapperElement: this.wrapperElement, controlBubbleElement: this.controlBubbleElement}
       );
       this.ritmGroup.setReadItToMe(this.props.ritmState);
+
+      this.props.onGroupMounted();
     }
 
     componentDidUpdate(prevProps, prevState, snapshot) {
