@@ -10,6 +10,13 @@
   &.focusin {
     outline:none;
 
+    > .read-it-to-me-control-bubble {
+      left:-7px;
+      top:-50px;
+      width: auto;
+      height: auto;
+    }
+
     > .read-this-to-me {
       &:before {
         content: "";
@@ -101,10 +108,15 @@
 }
 
 .read-it-to-me-control-bubble {
-  display:none;
+  // Visually hide the control bubble unless the read it to me wrapper has hover or the bubble has focus
+  // https://webaim.org/techniques/css/invisiblecontent/
   position:absolute;
-  left:-7px;
-  top:-50px;
+  left:-10000px;
+  top:auto;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+
   padding:5px 15px;
   background-color:$ritm-primary-color;
   box-shadow: 0 0 0 rgba(nth($primary, 1), nth($primary, 2), nth($primary, 3), 0.4);
@@ -112,9 +124,6 @@
   border-radius: 28px 28px 28px 0;
   text-align:center;
   line-height:1.42857143;
-}
-.read-it-to-me-content-group .read-it-to-me-control-bubble {
-  display:block;
 }
 .read-it-to-me-control-bubble > p.read-it-to-me-label,
 .read-it-to-me-control-bar .toggle-wrapper p.read-it-to-me-label {

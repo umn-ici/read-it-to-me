@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+<head>
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<!--
+<script async src="https://www.googletagmanager.com/gtag/js?id=YOUR-UA-ID"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'YOUR-UA-ID');
+</script>
+-->
+
+<meta charset="UTF-8">
+<title>Read-it-to-Me demonstration</title>
+<!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous"> -->
+<link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,700' rel='stylesheet' type='text/css'>
+<link rel="stylesheet" href="../css/read-it-to-me.min.css">
+<link rel="stylesheet" href="example.css">
+</head>
+
+<body>
+  <header>
+    <h1>Read-it-to-Me demonstration</h1>
+  </header>
+
+  <div role="main" id="app"></div>
+
+<script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"crossorigin></script>
+  <script src="../js/read-it-to-me.min.js"></script>
+<script type="text/babel">
+  function App() {
+/*
+Example of how to use the optional tracking hooks built into Read-it-to-Me
+In this case using Google Analytics (declared in <head>)
+*/
+//    function onPlay(utteranceId){
+//      var thisUtterance = utteranceId ? utteranceId : '';
+//      gtag('event', `Play Utterance [${thisUtterance}]`, {
+//        'event_label': 'User Interaction',
+//        'event_category': 'Read-it-to-Me'
+//      });
+//    }
+//    function onPause(utteranceId){
+//      var thisUtterance = utteranceId ? utteranceId : '';
+//      gtag('event', `Pause Utterance [${thisUtterance}]`, {
+//        'event_label': 'User Interaction',
+//        'event_category': 'Read-it-to-Me'
+//      });
+//    }
+//    function onCancel(utteranceId){
+//      var thisUtterance = utteranceId ? utteranceId : '';
+//      gtag('event', `Cancel Utterance [${thisUtterance}]`, {
+//        'event_label': 'User Interaction',
+//        'event_category': 'Read-it-to-Me'
+//      });
+//    }
+//    function onToggle(isEnabled){
+//      var toggleAction = isEnabled ? "[ On ]" : "[ Off ]";
+//      gtag('event', `Toggled ${toggleAction}`, {
+//        'event_label': 'User Interaction',
+//        'event_category': 'Read-it-to-Me'
+//      });
+//    }
+//
+//    return <ReadItToMe.ControlContext onPlay={onPlay} onPause={onPause} onCancel={onCancel} onToggle={onToggle}>...</ReadItToMe.ControlContext>;
+
+    return <ReadItToMe.ControlContext>
+      <section>
+        <ReadItToMe.ContentGroup trackingIdentifier="Simple content group demo.">
+          <h2>Simple content group</h2>
+          <p>Read-it-to-Me will run on this section because it has the 'read-it-to-me-content-group' class that the script looks for.</p>
+
+        </ReadItToMe.ContentGroup>
+      </section>
+
+      <section className="example">
+        <header>
+          <ReadItToMe.ContentGroup trackingIdentifier="Header for semantics demo.">
+            <h2>Content with some extra semantics</h2>
+            <p>With support for <a href="https://www.w3.org/TR/speech-synthesis11/"><abbr title="Speech Synthesis Markup Language">SSML</abbr></a> being nearly non-existent there isn't much we can do to affect how text is read. There are some small 'psuedo-semantic' things we can do.  At the moment I have the script inject pauses around or after text that was wrapped in particular tags in the source HTML. This is done by adding in some additional punctuation in the copy of the text I send to the Speech Synthesis API.</p>
+          </ReadItToMe.ContentGroup>
+        </header>
+
+        <article>
+          <ReadItToMe.ContentGroup trackingIdentifier="Semantics demo - Blade Runner Tears in Rain.">
+            <h3>Exaggerated example below to demonstrate</h3>
+            {/*}<!-- Went a little overboard here with <strong> and <em> to try and get somewhat close to Rutger Howard's pacing -->*/}
+            <p>I've <strong>seen</strong> things you people wouldn't believe. Attack ships on fire off the shoulder of Orion. I watched C-beams glitter in the dark near the Tannhäuser Gate. All those <strong>moments</strong> will be lost <em>in time</em>, like <em>tears</em> <em>in rain</em>.</p>
+
+            <p className="side-note">Judge for yourself whether I got close to the spirit of Rutger Hauer's delivery: <a href="https://youtu.be/NoAzpa1x7jU?t=108">Blade Runner - Final scene, "Tears in Rain" Monologue (HD)</a></p>
+          </ReadItToMe.ContentGroup>
+        </article>
+
+        <article>
+          <ReadItToMe.ContentGroup trackingIdentifier="">
+            <header>
+              <h3>Content with accronyms</h3>
+              <p>Some accronyms are spoken by Speech Synthesis as words (rather than a series of individually read letters) -- to make this more consistent the script adds some periods between the letters, each of which results in a short pause.</p>
+            </header>
+            <p>Direct Support Professionals (<abbr title="Direct Support Professional">DSP</abbr>s) provide daily support to people with intellectual and/or developmental disabilities (<abbr title="Intellectual and/or Developmental Disabilities">IDD</abbr>) so they can live and participate in their communities as friends, neighbors, coworkers, students, family members, volunteers, voters, and taxpayers.</p>
+          </ReadItToMe.ContentGroup>
+        </article>
+      </section>
+
+      <section className="example">
+        <ReadItToMe.ContentGroup trackingIdentifier="">
+          <header>
+            <h2>Nested Read-it-to-Me groups</h2>
+            <p className="side-note">Content brought to you by: <a href="http://www.cupcakeipsum.com/#">Cupcake Ipsum</a></p>
+          </header>
+
+          <article>
+            <ReadItToMe.ContentGroup>
+              Chupa chups cookie sesame snaps marshmallow danish. Dragée tart bear claw. Jelly-o halvah chupa chups apple pie sugar plum halvah chocolate bar. Toffee toffee croissant carrot cake toffee gingerbread.
+            </ReadItToMe.ContentGroup>
+          </article>
+
+          <article>
+            <ReadItToMe.ContentGroup>
+              Sesame snaps sesame snaps chupa chups oat cake chocolate apple pie jelly. Marshmallow chocolate jujubes apple pie jujubes marshmallow. Cake ice cream pastry dessert biscuit dessert apple pie ice cream cotton candy.
+            </ReadItToMe.ContentGroup>
+          </article>
+        </ReadItToMe.ContentGroup>
+      </section>
+
+      <a href="page.html">Second page for testing persistence of user choice to enable/disable Read-it-to-Me</a>
+    </ReadItToMe.ControlContext>;
+  }
+  ReactDOM.render(<App/>, document.getElementById('app'));
+</script>
+</body>
+</html>
