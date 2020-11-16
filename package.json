@@ -28,7 +28,7 @@
     "@babel/preset-env": "^7.4.4",
     "caniuse-api": "^3.0.0",
     "live-server": "^1.2.1",
-    "node-sass": "^4.12.0",
+    "node-sass": "^4.13.1",
     "postcss-preset-env": "^6.6.0",
     "rollup": "^1.12.3",
     "rollup-plugin-babel": "^4.3.2",
