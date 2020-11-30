@@ -109,8 +109,9 @@ if (typeof React !== 'undefined') {
   class ContentGroupComponent extends React.Component {
     componentDidMount() {
       const ritmOptionalTrackingIdentifier = this.props.trackingIdentifier; // TODO: Recreate group when this changes?
+      const filterOutTheseSelectors = this.props.filterOutTheseSelectors || '';
 
-      const text = () => getPlainTextWithPsuedoSemantics(this.wrapperElement);
+      const text = () => getPlainTextWithPsuedoSemantics(this.wrapperElement, filterOutTheseSelectors);
       this.ritmGroup = createRITMGroup(
         {playPauseGroup, cancelAudio, focusClassName, ritmDisabledClassName, elem: this.elem, ritmOptionalTrackingIdentifier, text},
         {wrapperElement: this.wrapperElement, controlBubbleElement: this.controlBubbleElement}

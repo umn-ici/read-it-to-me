@@ -32,6 +32,25 @@
       <p>Read-it-to-Me will run on this section because it has the 'read-it-to-me-content-group' class that the script looks for.</p>
     </section>
 
+    <section class="example read-it-to-me-content-group">
+      <h2>Exclude elements</h2>
+      <table>
+        <caption>You shouldn't be hearing this.</caption>
+        <tr>
+          <td>Foo</td>
+          <td>Bar</td>
+          <td>Foo</td>
+        </tr>
+      </table>
+      <p>Pass in a selector string to specify elements you want Read-it-to-Me to ignore.  Tables are a great example of this as Read-it-to-Me can't provide the semantic experience of table headers paired with each cell necessary to make sense of a table's information.</p>
+    </section>
+
+    <section class="example read-it-to-me-content-group">
+      <h2>Image alt text</h2>
+      <p>Alt text for images that have it will be read aloud.</p>
+      <img src="https://placekitten.com/600/200" alt="Cute cat. Such a good kitty.">
+    </section>
+
     <section class="example">
       <header class="read-it-to-me-content-group" data-ritm-optional-tracking-identifier="Header for semantics demo.">
         <h2>Content with some extra semantics</h2>
@@ -39,10 +58,9 @@
       </header>
 
       <article data-ritm-optional-tracking-identifier="Semantics demo - Blade Runner Tears in Rain.">
-        <h3>Exaggerated example below to demonstrate</h3>
+        <h3>Exaggerated example below to demonstrate 'injected' pauses.</h3>
         <!-- Went a little overboard here with <strong> and <em> to try and get somewhat close to Rutger Howard's pacing -->
         <p>I've <strong>seen</strong> things you people wouldn't believe. Attack ships on fire off the shoulder of Orion. I watched C-beams glitter in the dark near the Tannhäuser Gate. All those <strong>moments</strong> will be lost <em>in time</em>, like <em>tears</em> <em>in rain</em>.</p>
-
         <p class="side-note">Judge for yourself whether I got close to the spirit of Rutger Hauer's delivery: <a href="https://youtu.be/NoAzpa1x7jU?t=108">Blade Runner - Final scene, "Tears in Rain" Monologue (HD)</a></p>
       </article>
 
@@ -60,11 +78,8 @@
         <h2>Nested Read-it-to-Me groups</h2>
         <p class="side-note">Content brought to you by: <a href="http://www.cupcakeipsum.com/#">Cupcake Ipsum</a></p>
       </header>
-
       <article>Chupa chups cookie sesame snaps marshmallow danish. Dragée tart bear claw. Jelly-o halvah chupa chups apple pie sugar plum halvah chocolate bar. Toffee toffee croissant carrot cake toffee gingerbread.</article>
-
       <article>Sesame snaps sesame snaps chupa chups oat cake chocolate apple pie jelly. Marshmallow chocolate jujubes apple pie jujubes marshmallow. Cake ice cream pastry dessert biscuit dessert apple pie ice cream cotton candy.</article>
-
     </section>
 
     <a href="page.html">Second page for testing persistence of user choice to enable/disable Read-it-to-Me</a>
@@ -109,7 +124,7 @@ In this case using Google Analytics (declared in <head>)
 //     });
 //   }
 // });
-ReadItToMe.init('.example article, .example:nth-child(3)');
+ReadItToMe.init('.example article', 'table');
 </script>
 </body>
 </html>

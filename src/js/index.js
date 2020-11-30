@@ -12,6 +12,6 @@ export const eventTracking = ritm.eventTracking;
 export const ControlContext = ritmReact.ControlContext;
 export const ContentGroup = ritmReact.ContentGroup;
 
-export function init(selectors) {
-  return domInit(ritm.init, selectors);
+export function init(selectors, filterOutTheseSelectors='') {
+  return domInit(ritm.init, selectors, filterOutTheseSelectors);
 }

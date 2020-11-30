@@ -8,9 +8,24 @@ export const PLAYING_STATE = {
   PLAYING: 2
 };
 
-export let getPlainTextWithPsuedoSemantics = (textAncestor) => {
-  // In a copy of the node list, pepper in (dramatically misuse, hehe) some punctuation for the purpose of adding meaningful pauses and 'emphasis' during text readout.
+export let getPlainTextWithPsuedoSemantics = (textAncestor, filterOutTheseSelectors) => {
   let clonedTextAncestor = textAncestor.cloneNode(true);
+  const filterOutTheseSelectorsAndUI = filterOutTheseSelectors === '' ? '.read-it-to-me-control-bubble' : filterOutTheseSelectors + ', .read-it-to-me-control-bubble';
+
+  // Remove elements we don't want RITM reading
+  clonedTextAncestor.querySelectorAll(filterOutTheseSelectorsAndUI).forEach((elem) => {
+    elem.remove();
+  });
+
+  // Replace images with alt text with the alt text
+  clonedTextAncestor.querySelectorAll('img[alt]').forEach((elem) => {
+    const altText = elem.alt;
+    if (altText.length > 0) {
+      elem.replaceWith(`Image description begin. ${altText} Image description end.`);
+    }
+  });
+
+  // Pepper in some punctuation for the purpose of adding meaningful pauses and 'emphasis' during text readout.
   clonedTextAncestor.querySelectorAll('p, li, abbr, strong, em, h1, h2, h3, h4, h5, h6').forEach((elem) => {
     let tag = elem.tagName.toUpperCase();
     if (tag === 'P') {

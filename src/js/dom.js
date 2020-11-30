@@ -3,7 +3,7 @@ import {createControlBar} from './control-bar';
 import {createRITMGroup} from './group';
 import {getPlainTextWithPsuedoSemantics, groupClassName, focusClassName, ritmDisabledClassName} from './utils';
 
-export function init(initRITM, selectors) {
+export function init(initRITM, selectors, filterOutTheseSelectors) {
   // If there's nothing to read, don't initialize
   if (!((selectors && document.querySelectorAll(selectors).length > 0) || document.querySelectorAll(`.${groupClassName}`).length > 0)) {
     return;
@@ -22,7 +22,7 @@ export function init(initRITM, selectors) {
 
     const groupSelectorElements = document.querySelectorAll(`.${groupClassName}`);
     groupSelectorElements.forEach((elem) => {
-      const text = () => getPlainTextWithPsuedoSemantics(elem.querySelector('.read-this-to-me'));
+      const text = () => getPlainTextWithPsuedoSemantics(elem.querySelector('.read-this-to-me'), filterOutTheseSelectors);
       const ritmOptionalTrackingIdentifier = elem.dataset.ritmOptionalTrackingIdentifier || false;
       const group = createRITMGroup({playPauseGroup, cancelAudio, focusClassName, ritmDisabledClassName, elem, ritmOptionalTrackingIdentifier, text}, {document});
 
