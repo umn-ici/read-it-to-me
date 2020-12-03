@@ -1,4 +1,9 @@
 # Read-it-to-Me
+
+**Thanks for your interest in Read-it-to-Me - this project is archived**
+*It was a little overwhelming to keep this tool up to date as a side project, so we've folded it into our internal framework.*
+*You can experience it by visiting one of our publications, like this one for example: [Impact: Feature Issue on Self-Advocacy for People with Intellectual, Developmental, and Other Disabilities](https://publications.ici.umn.edu/impact/33-1/cover)*
+
 A text read-aloud tool utilizing the SpeechSynthesis interface of the Web Speech API incorporated into modern browsers.
 
 Not meant as a replacement for screen-reader assistive technology (JAWS, NVDA, etc), but rather as a fairly simple read-aloud tool, easily added to most web pages, to increase access to information.
